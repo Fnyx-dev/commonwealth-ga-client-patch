@@ -1,42 +1,37 @@
 #include "src/ClientPatches/ConfigTimestampStability/ConfigTimestampPolicy.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 
-using ClientConfigTimestampStability::StableFileTimestamp;
+using ClientConfigTimestampStability::kFileTimeTicksPerSecond;
+using ClientConfigTimestampStability::kUnixEpochFileTimeSeconds;
+using ClientConfigTimestampStability::UtcTimestampFromFileTime;
+
+namespace {
+
+std::uint64_t FileTimeFromUnixSeconds(std::uint64_t seconds, std::uint64_t extraTicks = 0) {
+	return (seconds + kUnixEpochFileTimeSeconds) * kFileTimeTicksPerSecond + extraTicks;
+}
+
+}  // namespace
 
 int main() {
-	// Central European time: StandardBias 0, DaylightBias -60 minutes.
-	// A file written in winter (UTC 1772224066) and one written in summer
-	// (UTC 1792523307), as the retail CRT reports them in each season.
-	const double winterFileUtc = 1772224066.0;
-	const double summerFileUtc = 1792523307.0;
-	const double winterFileDuringWinter = winterFileUtc;
-	const double summerFileDuringWinter = summerFileUtc - 3600.0;
-	const double winterFileDuringSummer = winterFileUtc + 3600.0;
-	const double summerFileDuringSummer = summerFileUtc;
+	// The Unix epoch itself.
+	assert(UtcTimestampFromFileTime(FileTimeFromUnixSeconds(0)) == 0.0);
 
-	// Standard time passes the CRT value through unchanged.
-	assert(StableFileTimestamp(winterFileDuringWinter, false, 0, -60) ==
-		winterFileDuringWinter);
-	assert(StableFileTimestamp(summerFileDuringWinter, false, 0, -60) ==
-		summerFileDuringWinter);
+	// Files written in winter (Feb 27) and summer (Oct 20) of a CET install.
+	// The retail CRT reported the summer file 3600 s early during winter and
+	// the winter file 3600 s late during summer; UTC needs no season input.
+	assert(UtcTimestampFromFileTime(FileTimeFromUnixSeconds(1772224066)) == 1772224066.0);
+	assert(UtcTimestampFromFileTime(FileTimeFromUnixSeconds(1792523307)) == 1792523307.0);
 
-	// Daylight time maps to the same values, so [IniVersion] stays equal.
-	assert(StableFileTimestamp(winterFileDuringSummer, true, 0, -60) ==
-		winterFileDuringWinter);
-	assert(StableFileTimestamp(summerFileDuringSummer, true, 0, -60) ==
-		summerFileDuringWinter);
+	// Sub-second ticks truncate to whole seconds, like st_mtime.
+	assert(UtcTimestampFromFileTime(
+		FileTimeFromUnixSeconds(1792523307, kFileTimeTicksPerSecond - 1)) == 1792523307.0);
 
-	// Zones with a non-hour daylight bias (Lord Howe Island: 30 minutes).
-	assert(StableFileTimestamp(1000.0 + 1800.0, true, 0, -30) == 1000.0);
-
-	// Zones without daylight saving are never adjusted.
-	assert(StableFileTimestamp(winterFileUtc, false, 0, 0) == winterFileUtc);
-
-	// The engine's failure value is preserved in every season.
-	assert(StableFileTimestamp(-1.0, true, 0, -60) == -1.0);
-	assert(StableFileTimestamp(-1.0, false, 0, -60) == -1.0);
+	// Times past 2038 stay exact.
+	assert(UtcTimestampFromFileTime(FileTimeFromUnixSeconds(4102444800ULL)) == 4102444800.0);
 
 	std::puts("config timestamp policy tests passed");
 	return 0;

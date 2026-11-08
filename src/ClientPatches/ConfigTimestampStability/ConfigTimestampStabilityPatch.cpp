@@ -3,6 +3,8 @@
 #include "src/ClientPatches/ConfigTimestampStability/ConfigTimestampPolicy.hpp"
 #include "src/Utils/HookBase.hpp"
 
+#include <cstdint>
+
 namespace {
 
 class GetFileTimestampHook : public HookBase<
@@ -18,13 +20,17 @@ public:
 		void* edx,
 		const wchar_t* filename) {
 		const double timestamp = m_original(fileManager, edx, filename);
-		TIME_ZONE_INFORMATION zone{};
-		const DWORD zoneId = GetTimeZoneInformation(&zone);
-		return ClientConfigTimestampStability::StableFileTimestamp(
-			timestamp,
-			zoneId == TIME_ZONE_ID_DAYLIGHT,
-			zone.StandardBias,
-			zone.DaylightBias);
+		// Keep the engine's -1 for missing or unreadable files.
+		if (timestamp < 0.0) return timestamp;
+
+		WIN32_FILE_ATTRIBUTE_DATA attributes{};
+		if (!GetFileAttributesExW(filename, GetFileExInfoStandard, &attributes)) {
+			return timestamp;
+		}
+		const std::uint64_t writeTime =
+			(static_cast<std::uint64_t>(attributes.ftLastWriteTime.dwHighDateTime) << 32) |
+			attributes.ftLastWriteTime.dwLowDateTime;
+		return ClientConfigTimestampStability::UtcTimestampFromFileTime(writeTime);
 	}
 };
 

@@ -25,7 +25,8 @@ All bundled changes are client-side and require no server support.
   labels proportional above 1080p.
 - **Config timestamp stability** stops keybindings and other settings from
   resetting when daylight saving time starts or ends. The engine compares
-  config file timestamps that shifted by an hour at each transition.
+  config file timestamps that shifted by an hour at each transition. The
+  first launch with the fix may reset settings one last time.
 
 ### Features
 
