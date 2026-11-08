@@ -337,7 +337,7 @@ void DeliverDebugJoinSummary() {
 		L"Scoped Weapon Visibility; "
 		L"Jetpack Aim Alignment; "
 		L"Field of View Slider; Combat Text Scaling; F2 Stats Scaling; "
-		L"Friendly Label Normalization.");
+		L"Friendly Label Normalization; Config Timestamp Stability.");
 
 	if (count == 0) {
 		QueueLocalInstanceMessage(

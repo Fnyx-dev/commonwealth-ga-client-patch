@@ -2,6 +2,7 @@
 
 #include "src/pch.hpp"
 
+#include "src/ClientPatches/ConfigTimestampStability/ConfigTimestampStabilityPatch.hpp"
 #include "src/ClientPatches/PerformanceOptimizations/Audio/AudioUpdatePerformancePatch.hpp"
 #include "src/ClientPatches/MorphRebuildPerformance/MorphRebuildPerformancePatch.hpp"
 #include "src/ClientPatches/ScopedWeaponVisibility/ScopedWeaponVisibilityPatch.hpp"
@@ -121,6 +122,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
 	if (result == NO_ERROR) result = ClientF2StatsScalingPatch::Install();
 	if (result == NO_ERROR) result = ClientSpectatorNameplatesPatch::Install();
 	if (result == NO_ERROR) result = ClientFovSliderPatch::Install();
+	if (result == NO_ERROR) result = ClientConfigTimestampStabilityPatch::Install();
 	if (result == NO_ERROR) result = FeatureHandshakePatch::InstallIfNeeded();
 	if (result != NO_ERROR) {
 		::DetourTransactionAbort();
@@ -145,7 +147,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
 		"[ready] client patches installed: audio performance, morph rebuild, "
 		"scoped weapon visibility, jetpack aim alignment, spectator nameplates, "
 		"FOV slider, combat text scaling, F2 stats scaling, friendly label "
-		"normalization\n");
+		"normalization, config timestamp stability\n");
 	return 0;
 }
 

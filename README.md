@@ -23,6 +23,9 @@ All bundled changes are client-side and require no server support.
   its 1080p baseline.
 - **Friendly overhead-label normalization** keeps player, agency, and alliance
   labels proportional above 1080p.
+- **Config timestamp stability** stops keybindings and other settings from
+  resetting when daylight saving time starts or ends. The engine compares
+  config file timestamps that shifted by an hour at each transition.
 
 ### Features
 
