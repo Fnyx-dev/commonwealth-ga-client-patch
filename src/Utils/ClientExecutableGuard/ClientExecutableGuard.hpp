@@ -28,4 +28,10 @@ const Fingerprint& ExecutableFingerprint();
 const char* StatusName(SupportStatus status);
 bool IsSupported();
 
+// Cheap pre-check of the loaded image (base, PE timestamp, image size) for the
+// few hooks that must be in place before the full .text hash completes. It is
+// never sufficient on its own: such hooks must also verify the exact bytes they
+// patch and be removed if Status() later reports the executable unsupported.
+bool LoadedImageHeaderMatches();
+
 }  // namespace ClientExecutableGuard

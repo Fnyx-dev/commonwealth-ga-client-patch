@@ -227,4 +227,16 @@ bool IsSupported() {
 	return Status() == SupportStatus::Supported;
 }
 
+bool LoadedImageHeaderMatches() {
+	const auto* base = reinterpret_cast<const unsigned char*>(GetModuleHandleW(nullptr));
+	if (reinterpret_cast<std::uintptr_t>(base) != kSupportedImageBase) return false;
+	const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+	if (dos->e_magic != IMAGE_DOS_SIGNATURE) return false;
+	const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
+	return nt->Signature == IMAGE_NT_SIGNATURE
+		&& nt->FileHeader.Machine == IMAGE_FILE_MACHINE_I386
+		&& nt->FileHeader.TimeDateStamp == kSupportedPeTimestamp
+		&& nt->OptionalHeader.SizeOfImage == kSupportedImageSize;
+}
+
 }  // namespace ClientExecutableGuard

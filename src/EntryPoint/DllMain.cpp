@@ -72,7 +72,14 @@ bool InitializeRuntimeDiagnostics() {
 DWORD WINAPI InstallHooks(LPVOID) {
 	// Run allocations, filesystem setup, executable hashing, and Detours work
 	// outside DllMain's loader lock.
+	//
+	// The engine checks its config files right after startup, usually before the
+	// executable hash below completes, so the config timestamp hook goes first in
+	// its own byte-verified transaction and is removed again if the guard fails.
+	ClientConfigTimestampStabilityPatch::InstallEarly();
+
 	if (!InitializeRuntimeDiagnostics()) {
+		ClientConfigTimestampStabilityPatch::FinishInstall(ClientExecutableGuard::IsSupported());
 		OutputDebugStringA(
 			"Client patch disabled: runtime diagnostics initialization failed.\n");
 		return ERROR_PATH_NOT_FOUND;
@@ -83,6 +90,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
 	const auto status = ClientExecutableGuard::Status();
 	const auto& fingerprint = ClientExecutableGuard::ExecutableFingerprint();
 	if (status != ClientExecutableGuard::SupportStatus::Supported) {
+		ClientConfigTimestampStabilityPatch::FinishInstall(false);
 		Logger::Log(
 			"clientpatch",
 			"[unsupported] hooks skipped: status=%s timestamp=0x%08lx "
@@ -93,6 +101,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
 			static_cast<unsigned long long>(fingerprint.textHashPrefix));
 		return 0;
 	}
+	ClientConfigTimestampStabilityPatch::FinishInstall(true);
 	ClientCombatTextScalePatch::Initialize();
 	ClientFovSliderPatch::Initialize();
 	if (!RegisterClientFeatures()) {
@@ -122,7 +131,6 @@ DWORD WINAPI InstallHooks(LPVOID) {
 	if (result == NO_ERROR) result = ClientF2StatsScalingPatch::Install();
 	if (result == NO_ERROR) result = ClientSpectatorNameplatesPatch::Install();
 	if (result == NO_ERROR) result = ClientFovSliderPatch::Install();
-	if (result == NO_ERROR) result = ClientConfigTimestampStabilityPatch::Install();
 	if (result == NO_ERROR) result = FeatureHandshakePatch::InstallIfNeeded();
 	if (result != NO_ERROR) {
 		::DetourTransactionAbort();
@@ -147,7 +155,8 @@ DWORD WINAPI InstallHooks(LPVOID) {
 		"[ready] client patches installed: audio performance, morph rebuild, "
 		"scoped weapon visibility, jetpack aim alignment, spectator nameplates, "
 		"FOV slider, combat text scaling, F2 stats scaling, friendly label "
-		"normalization, config timestamp stability\n");
+		"normalization%s\n",
+		ClientConfigTimestampStabilityPatch::IsInstalled() ? ", config timestamp stability" : "");
 	return 0;
 }
 
