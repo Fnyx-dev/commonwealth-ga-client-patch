@@ -2,8 +2,8 @@
 
 #include "src/pch.hpp"
 
-// Keeps engine file timestamps independent of the current daylight-saving
-// season so generated config files are not reset at every DST transition.
+// Treats [IniVersion] timestamps that differ by exactly one hour as unchanged
+// so generated config files are not reset at DST transitions.
 class ClientConfigTimestampStabilityPatch {
 public:
 	static LONG Install();
